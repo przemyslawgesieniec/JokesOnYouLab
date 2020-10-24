@@ -1,0 +1,41 @@
+# Eclipse
+/**/.classpath/
+/**/.project/
+/**/.settings/
+/**/.factorypath/
+/**/.springbeans/
+
+# Intellij
+/**/.idea/
+/**/*.iml
+/**/*.iws
+/**/out/
+/**/classes/
+
+# Gradle
+/**/.gradle/
+/**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# npm
+/**/npm-debug.log*
+/**/node_modules/
+.project
+
+*.classpath
+/**/bin/
+/**/src/main/generated/
+/src/pipeline.gdsl
+
+# Visual Studio Code
+.vscode/
+/ui/dist/
+/ui/coverage/
+esc.iml
+/ui/out-tsc/
+
+# Apache
+derby.log
+
+#Logs
+logs/
