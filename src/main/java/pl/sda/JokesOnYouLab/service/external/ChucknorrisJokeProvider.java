@@ -61,6 +61,14 @@ public class ChucknorrisJokeProvider implements ExternalJokeProvider {
     }
 
     private <T> T getResponseBodyOrThrowException(final String url, Class<T> aClass) throws JokeException {
+        final ResponseEntity<T> exchange = httpGetRequest(url, aClass);
+        if (!exchange.getStatusCode().equals(HttpStatus.OK)) {
+            throw new JokeException("External service did not respond as expected");
+        }
+        return exchange.getBody();
+    }
+
+    private <T> ResponseEntity<T> httpGetRequest(String url, Class<T> aClass) {
         HttpHeaders headers = new HttpHeaders();
 
         headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
@@ -68,12 +76,8 @@ public class ChucknorrisJokeProvider implements ExternalJokeProvider {
         headers.add("user-agent", "JokenOnYOuApplication");
         HttpEntity entity = new HttpEntity(headers);
 
-        final ResponseEntity<T> exchange = restTemplate.exchange(
+        return restTemplate.exchange(
                 url, HttpMethod.GET, entity, aClass);
-        if (!exchange.getStatusCode().equals(HttpStatus.OK)) {
-            throw new JokeException("External service did not respond as expected");
-        }
-        return exchange.getBody();
     }
 
     private String chooseRandomCategory() throws JokeException {
@@ -84,4 +88,5 @@ public class ChucknorrisJokeProvider implements ExternalJokeProvider {
                 .findFirst()
                 .orElse("Chuck Norris");
     }
+
 }
