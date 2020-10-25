@@ -18,11 +18,15 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JokeDispatcherServiceTest {
 
     private List<ExternalJokeProvider> externalJokeProviders;
     private JokeDispatcherService jokeDispatcherService;
+    private Sv443JokeProvider sv443JokeProvider;
+    private ChucknorrisJokeProvider chucknorrisJokeProvider;
+    private RandomnessProvider randomnessProviderMock;
 
     public JokeDispatcherServiceTest() {
         this.externalJokeProviders = new ArrayList<>();
@@ -36,11 +40,7 @@ class JokeDispatcherServiceTest {
     @Test
     void shouldCallAllGetAvailableCategoriesMethodsCallingProvideJokeCategories() throws JokeException {
         //given
-        Sv443JokeProvider sv443JokeProvider = Mockito.mock(Sv443JokeProvider.class);
-        ChucknorrisJokeProvider chucknorrisJokeProvider = Mockito.mock(ChucknorrisJokeProvider.class);
-
-        externalJokeProviders.add(sv443JokeProvider);
-        externalJokeProviders.add(chucknorrisJokeProvider);
+        prepareExternalServicesMocks();
 
         jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, new RandomnessProvider());
 
@@ -52,18 +52,15 @@ class JokeDispatcherServiceTest {
         Mockito.verify(chucknorrisJokeProvider, Mockito.times(1)).getAvailableCategories();
     }
 
+
     @Test
     void shouldProvideCombinedDistinctElementSet() throws JokeException {
         //given
-        Sv443JokeProvider sv443JokeProvider = Mockito.mock(Sv443JokeProvider.class);
-        ChucknorrisJokeProvider chucknorrisJokeProvider = Mockito.mock(ChucknorrisJokeProvider.class);
+        prepareExternalServicesMocks();
 
         Mockito.when(sv443JokeProvider.getAvailableCategories()).thenReturn(new HashSet<>(Arrays.asList("fashion", "food")));
         Mockito.when(chucknorrisJokeProvider.getAvailableCategories()).thenReturn(new HashSet<>(Arrays.asList("fashion", "political")));
         Mockito.when(chucknorrisJokeProvider.getAvailableCategories()).thenReturn(new HashSet<>(Arrays.asList("fashion", "political")));
-
-        externalJokeProviders.add(sv443JokeProvider);
-        externalJokeProviders.add(chucknorrisJokeProvider);
 
         jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, new RandomnessProvider());
 
@@ -76,46 +73,37 @@ class JokeDispatcherServiceTest {
     @Test
     void shouldProvideRandomJokeWhenAllServicesAreAvailable() throws JokeException {
         //given
-        jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, new RandomnessProvider());
-        Sv443JokeProvider sv443JokeProvider = Mockito.mock(Sv443JokeProvider.class);
-        ChucknorrisJokeProvider chucknorrisJokeProvider = Mockito.mock(ChucknorrisJokeProvider.class);
+        randomnessProviderMock = Mockito.mock(RandomnessProvider.class);
+        prepareExternalServicesMocks();
+        List<Integer> executionOrder = provideExecutionOrder();
+
+        jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, randomnessProviderMock);
 
         Mockito.when(sv443JokeProvider.getRandomJoke()).thenReturn(Mockito.mock(Joke.class));
         Mockito.when(chucknorrisJokeProvider.getRandomJoke()).thenReturn(Mockito.mock(Joke.class));
-        externalJokeProviders.add(sv443JokeProvider);
-        externalJokeProviders.add(chucknorrisJokeProvider);
+        Mockito.when(randomnessProviderMock.determineCallingOrder(Mockito.anyInt()))
+                .thenReturn(executionOrder);
 
         //when
         jokeDispatcherService.provideRandomJoke();
 
         //then
-        if (Mockito.mockingDetails(sv443JokeProvider).getInvocations().isEmpty()) {
-            Mockito.verify(chucknorrisJokeProvider, Mockito.times(1)).getRandomJoke();
-            Mockito.verify(sv443JokeProvider, Mockito.times(0)).getRandomJoke();
-        } else {
-            Mockito.verify(chucknorrisJokeProvider, Mockito.times(0)).getRandomJoke();
-            Mockito.verify(sv443JokeProvider, Mockito.times(1)).getRandomJoke();
-        }
+        Mockito.verify(chucknorrisJokeProvider, Mockito.times(0)).getRandomJoke();
+        Mockito.verify(sv443JokeProvider, Mockito.times(1)).getRandomJoke();
     }
 
     @Test
     void shouldProvideRandomJokeWhenNotAllServicesAreAvailable() throws Throwable {
         //given
-        Sv443JokeProvider sv443JokeProvider = Mockito.mock(Sv443JokeProvider.class);
-        ChucknorrisJokeProvider chucknorrisJokeProvider = Mockito.mock(ChucknorrisJokeProvider.class);
-        RandomnessProvider randomnessProviderMock = Mockito.mock(RandomnessProvider.class);
+        randomnessProviderMock = Mockito.mock(RandomnessProvider.class);
+        prepareExternalServicesMocks();
 
-        externalJokeProviders.add(chucknorrisJokeProvider);
-        externalJokeProviders.add(sv443JokeProvider);
+        List<Integer> executionOrder = provideExecutionOrder();
 
-        List<Integer> list = new ArrayList<>();
-        list.add(0);
-        list.add(1);
-
-        Mockito.when(sv443JokeProvider.getRandomJoke()).thenReturn(Mockito.mock(Joke.class));
-        Mockito.when(chucknorrisJokeProvider.getRandomJoke()).thenThrow(new JokeException("Error"));
+        Mockito.when(chucknorrisJokeProvider.getRandomJoke()).thenReturn(Mockito.mock(Joke.class));
+        Mockito.when(sv443JokeProvider.getRandomJoke()).thenThrow(new JokeException("Error"));
         Mockito.when(randomnessProviderMock.determineCallingOrder(Mockito.anyInt()))
-                .thenReturn(list);
+                .thenReturn(executionOrder);
 
 
         jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, randomnessProviderMock);
@@ -123,13 +111,44 @@ class JokeDispatcherServiceTest {
 
         //when
         Executable executable = () -> jokeDispatcherService.provideRandomJoke();
-        executable.execute();
 
         //then
+        assertDoesNotThrow(executable);
         Mockito.verify(chucknorrisJokeProvider, Mockito.times(1)).getRandomJoke();
         Mockito.verify(sv443JokeProvider, Mockito.times(1)).getRandomJoke();
-        assertDoesNotThrow(executable);
     }
 
+    private List<Integer> provideExecutionOrder() {
+        List<Integer> list = new ArrayList<>();
+        list.add(0);
+        list.add(1);
+        return list;
+    }
 
+    @Test
+    void shouldProvideRandomJokeWhenAllServicesAreNotAvailable() throws Throwable {
+        //given
+        prepareExternalServicesMocks();
+
+        Mockito.when(chucknorrisJokeProvider.getRandomJoke()).thenThrow(new JokeException("Error"));
+        Mockito.when(sv443JokeProvider.getRandomJoke()).thenThrow(new JokeException("Error"));
+
+        jokeDispatcherService = new JokeDispatcherService(externalJokeProviders, new RandomnessProvider());
+
+        //when
+        Executable executable = () -> jokeDispatcherService.provideRandomJoke();
+
+        //then
+        assertThrows(JokeException.class, executable);
+        Mockito.verify(chucknorrisJokeProvider, Mockito.times(1)).getRandomJoke();
+        Mockito.verify(sv443JokeProvider, Mockito.times(1)).getRandomJoke();
+    }
+
+    private void prepareExternalServicesMocks() {
+        sv443JokeProvider = Mockito.mock(Sv443JokeProvider.class);
+        chucknorrisJokeProvider = Mockito.mock(ChucknorrisJokeProvider.class);
+
+        externalJokeProviders.add(sv443JokeProvider);
+        externalJokeProviders.add(chucknorrisJokeProvider);
+    }
 }
