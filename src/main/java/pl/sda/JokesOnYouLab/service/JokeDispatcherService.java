@@ -5,8 +5,6 @@ import pl.sda.JokesOnYouLab.model.Joke;
 import pl.sda.JokesOnYouLab.model.JokeException;
 import pl.sda.JokesOnYouLab.service.external.ExternalJokeProvider;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,13 +13,16 @@ import java.util.Set;
 public class JokeDispatcherService {
 
     private List<ExternalJokeProvider> externalJokeProviderList;
+    private RandomnessProvider randomnessProvider;
 
-    public JokeDispatcherService(List<ExternalJokeProvider> externalJokeProviderList) {
+    public JokeDispatcherService(final List<ExternalJokeProvider> externalJokeProviderList,
+                                 final RandomnessProvider randomnessProvider) {
         this.externalJokeProviderList = externalJokeProviderList;
+        this.randomnessProvider = randomnessProvider;
     }
 
     public Joke provideRandomJoke() throws JokeException {
-        final List<Integer> callingOrder = determineCallingOrder();
+        final List<Integer> callingOrder = randomnessProvider.determineCallingOrder(externalJokeProviderList.size());
         return getJokeOrCallAnotherServiceInCaseOfError(callingOrder);
     }
 
@@ -41,16 +42,8 @@ public class JokeDispatcherService {
         return set;
     }
 
-    private List<Integer> determineCallingOrder() {
-        List<Integer> callingOrderList = new ArrayList<>();
-        for (int i = 0; i < externalJokeProviderList.size(); i++) {
-            callingOrderList.add(i);
-        }
-        Collections.shuffle(callingOrderList);
-        return callingOrderList;
-    }
 
-
+    //  1
     private Joke getJokeOrCallAnotherServiceInCaseOfError(List<Integer> callingOrder) throws JokeException {
         try {
             return externalJokeProviderList.get(callingOrder.get(0)).getRandomJoke();
