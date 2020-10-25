@@ -40,7 +40,7 @@ public class Sv443JokeProvider implements ExternalJokeProvider {
     }
 
     @Override
-    public Set<String> getAvailableCategories() {
+    public Set<String> getAvailableCategories() throws JokeException {
         final String categoriesJson = getResponseBodyOrThrow(baseUrl + jokeCategoriesPath, String.class);
         return extractCategories(categoriesJson);
     }
@@ -54,7 +54,7 @@ public class Sv443JokeProvider implements ExternalJokeProvider {
         return responseEntity.getBody();
     }
 
-    private Joke extractJoke(final String responseBody) {
+    private Joke extractJoke(final String responseBody) throws JokeException {
         try {
             final JsonNode jsonNode = objectMapper.readTree(responseBody);
             final String category = jsonNode.path("category").asText();
@@ -70,7 +70,7 @@ public class Sv443JokeProvider implements ExternalJokeProvider {
         }
     }
 
-    private Set<String> extractCategories(final String responseBody) {
+    private Set<String> extractCategories(final String responseBody) throws JokeException {
         try {
             final JsonNode jsonNode = objectMapper.readTree(responseBody);
             final ArrayNode categoriesArrayNode = (ArrayNode) (jsonNode.get("categories"));
